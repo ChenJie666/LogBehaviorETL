@@ -35,18 +35,18 @@ object LogBehaviorEtl {
     readProperties.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
     readProperties.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer")
     val myConsumer = new FlinkKafkaConsumer[String](KafkaConstant.READ_KAFKA_TOPIC, new SimpleStringSchema(), readProperties)
-    myConsumer.setStartFromEarliest()
-    //    myConsumer.setStartFromLatest()
+    //    myConsumer.setStartFromEarliest()
+    myConsumer.setStartFromLatest()
 
     // 从kafka中读取
     val inputStream = env.addSource(myConsumer)
     // 从端口中读取
     //        val inputStream = env.socketTextStream("192.168.32.242", 7777)
     // 从文本中读取
-    //    val resource = getClass.getResource("/DeviceModelLog")
-    //    val inputStream = env.readTextFile(resource.getPath)
+    //        val resource = getClass.getResource("/DeviceModelLog")
+    //        val inputStream = env.readTextFile(resource.getPath)
 
-//    inputStream.print("...")
+    //    inputStream.print("...")
 
     val dataStream = inputStream
       .map(log => {
@@ -57,7 +57,7 @@ object LogBehaviorEtl {
         //        val data = jsonObject.getString("items")
         ModelLogQ6(iotId, productKey, gmtCreate, log)
       })
-//          .assignAscendingTimestamps(_.gmtCreate)
+      //          .assignAscendingTimestamps(_.gmtCreate)
       .assignTimestampsAndWatermarks(new BoundedOutOfOrdernessTimestampExtractor[ModelLogQ6](Time.seconds(5)) {
         override def extractTimestamp(element: ModelLogQ6): Long = element.gmtCreate
       })
@@ -79,11 +79,11 @@ object LogBehaviorEtl {
     //    writeProperties.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer")
     // 迟到数据
     val lateStream = selectStream.getSideOutput(outputTag)
-    lateStream.print("warn")
+//    lateStream.print("warn")
     lateStream.addSink(new FlinkKafkaProducer[String](KafkaConstant.WRITE_LATE_KAFKA_TOPIC, new SimpleStringSchema(), writeProperties))
     // 正常数据
     val resultStream = selectStream.filter(_ != null)
-    resultStream.print("info")
+//    resultStream.print("info")
     resultStream.addSink(new FlinkKafkaProducer[String](KafkaConstant.WRITE_SUCCESS_KAFKA_TOPIC, new SimpleStringSchema(), writeProperties))
 
     env.execute("Q6 Log ETL")
